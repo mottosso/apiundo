@@ -45,12 +45,18 @@ Keep in mind that you are responsible for the undo to actually undo what you int
 
 ### Install
 
-apiundo is a single Python module, compatible **Maya 2015** and above on Windows, Linux and MacOS.
+apiundo is a single Python module, compatible with **Maya 2015** and above on Windows, Linux and MacOS.
 
 1. Download [`apiundo.py`](https://raw.githubusercontent.com/mottosso/apiundo/master/apiundo.py)
 2. Save in your `$HOME/maya/scripts` directory
 
 Or anywhere on your `PYTHONPATH`.
+
+`$HOME` on..
+
+- ..Windows is `c:\users\<username>`
+- ..Linux is `/home/<username>`
+- ..MacOS is `/Users/<username>`
 
 <br>
 
