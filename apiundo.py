@@ -2,6 +2,7 @@
 
 import os
 import sys
+import types
 
 from maya import cmds
 from maya.api import OpenMaya as om
@@ -13,17 +14,13 @@ def maya_useNewAPI():
     pass
 
 
-# This module is both a Python module and Maya plug-in. Maya doesn't
-# play by the rules when it comes to loading modules, so we can't either.
-#
-# To Maya the __name__ of this module is "__builtin__", therefore in order
-# to reference it, we must spell it out by name.
-#
-# This member is what we use to share data between Python and Maya plug-in.
-shared = sys.modules["apiundo"]
-shared.undoHistory = list()
-shared.redoHistory = list()
-shared.installed = False
+name = "apiundoShared"
+if name not in sys.modules:
+    sys.modules[name] = types.ModuleType(name)
+
+shared = sys.modules[name]
+shared.undo = None
+shared.redo = None
 
 
 def commit(undo, redo=lambda: None):
@@ -35,11 +32,11 @@ def commit(undo, redo=lambda: None):
 
     """
 
-    if not shared.installed:
+    if not hasattr(cmds, "apiUndo"):
         install()
 
-    shared.undoHistory.append(undo)
-    shared.redoHistory.append(redo)
+    shared.undo = undo
+    shared.redo = redo
 
     # Let Maya know that something is undoable
     cmds.apiUndo()
@@ -85,17 +82,16 @@ def reinstall():
 
 class apiUndo(om.MPxCommand):
     def doIt(self, args):
-        pass
+        self.undo = shared.undo
+        self.redo = shared.redo
 
     def undoIt(self):
         self.displayInfo("Undoing..")
-        func = shared.undoHistory.pop()
-        func()
+        self.undo()
 
     def redoIt(self):
         self.displayInfo("Redoing..")
-        func = shared.redoHistory.pop()
-        func()
+        self.redo()
 
     def isUndoable(self):
         # Without this, the above undoIt and redoIt will not be called
