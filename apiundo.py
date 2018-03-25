@@ -7,14 +7,23 @@ import types
 from maya import cmds
 from maya.api import OpenMaya as om
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 
 def maya_useNewAPI():
     pass
 
 
-name = "apiundoShared"
+# Support for multiple co-existing versions of apiundo.
+# NOTE: This is important for vendoring, as otherwise a vendored apiundo
+# could register e.g. cmds.apiUndo() first, causing a newer version
+# to inadvertently use this older command (or worse yet, throwing an
+# error when trying to register it again).
+command = "_apiUndo_%s" % __version__.replace(".", "_")
+
+# This module is both a Python module and Maya plug-in.
+# Data is shared amongst the two through this "module"
+name = "_apiundoShared"
 if name not in sys.modules:
     sys.modules[name] = types.ModuleType(name)
 
@@ -32,14 +41,24 @@ def commit(undo, redo=lambda: None):
 
     """
 
-    if not hasattr(cmds, "apiUndo"):
+    if not hasattr(cmds, command):
         install()
 
+    # Precautionary measure.
+    # If this doesn't pass, odds are we've got a race condition.
+    # NOTE: This assumes calls to `commit` can only be done
+    # from a single thread, which should already be the case
+    # given that Maya's API is not threadsafe.
+    assert shared.redo is None
+    assert shared.undo is None
+
+    # Temporarily store the functions at module-level,
+    # they are later picked up by the command once called.
     shared.undo = undo
     shared.redo = redo
 
     # Let Maya know that something is undoable
-    cmds.apiUndo()
+    getattr(cmds, command)()
 
 
 def install():
@@ -50,12 +69,14 @@ def install():
     """
 
     cmds.loadPlugin(__file__, quiet=True)
-    shared.installed = True
 
 
 def uninstall():
+    # Plug-in may exist in undo queue and
+    # therefore cannot be unloaded until flushed.
+    cmds.flushUndo()
+
     cmds.unloadPlugin(os.path.basename(__file__))
-    shared.installed = False
 
 
 def reinstall():
@@ -66,12 +87,6 @@ def reinstall():
     Call this when changes have been made to this module.
 
     """
-
-    # Plug-in may exist in undo queue and
-    # therefore cannot be unloaded until flushed.
-    state = cmds.undoInfo(state=True, query=True)
-    cmds.undoInfo(state=False)
-    cmds.undoInfo(state=state)
 
     uninstall()
     sys.modules.pop(__name__)
@@ -85,12 +100,14 @@ class apiUndo(om.MPxCommand):
         self.undo = shared.undo
         self.redo = shared.redo
 
+        # Facilitate the above precautionary measure
+        shared.undo = None
+        shared.redo = None
+
     def undoIt(self):
-        self.displayInfo("Undoing..")
         self.undo()
 
     def redoIt(self):
-        self.displayInfo("Redoing..")
         self.redo()
 
     def isUndoable(self):
@@ -99,12 +116,11 @@ class apiUndo(om.MPxCommand):
 
 
 def initializePlugin(plugin):
-    shared.plugin = plugin
     om.MFnPlugin(plugin).registerCommand(
-        apiUndo.__name__,
+        command,
         apiUndo
     )
 
 
 def uninitializePlugin(plugin):
-    om.MFnPlugin(plugin).deregisterCommand(apiUndo.__name__)
+    om.MFnPlugin(plugin).deregisterCommand(command)
