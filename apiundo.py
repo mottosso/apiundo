@@ -6,6 +6,8 @@ import sys
 from maya import cmds
 from maya.api import OpenMaya as om
 
+__version__ = "0.1.0"
+
 
 def maya_useNewAPI():
     pass
@@ -101,6 +103,7 @@ class apiUndo(om.MPxCommand):
 
 
 def initializePlugin(plugin):
+    shared.plugin = plugin
     om.MFnPlugin(plugin).registerCommand(
         apiUndo.__name__,
         apiUndo
