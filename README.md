@@ -1,4 +1,6 @@
-### Undo/Redo support for Maya Python API 2.0
+<img width=300 src=apiundo.svg>
+
+##### Undo/Redo support for Maya Python API 2.0
 
 Leverage the API in your Python scripts, without losing out on the ability to undo or redo.
 
