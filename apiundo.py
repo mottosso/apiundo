@@ -1,40 +1,4 @@
-"""Commit to Maya's internal Undo queue
-
-Example:
-    >>> mod = om.MDagModifier()
-    >>> mod.createNode("transform")
-    >>> mod.doIt()
-
-    >>> apiundo.commit(
-    ...     undo=mod.undoIt,
-    ...     redo=mod.doIt
-    ... )
-    ...
-
-Following this, undo will cause the newly created transform to
-be deleted, redoing will cause it to be re-created.
-
-How it works:
-    An MPxCommand plug-in is registered and called whenever an
-    undo operations is added to the queue. The call itself does
-    nothing and is meant to represent API calls made before it.
-    Calling it means Maya queues the subsequent undo and redo
-    operations for when you next undo and redo.
-
-Features:
-    - Undo and redo any arbitrary command
-    - Intermix API undo with native undo from calls via `cmds` or `PyMEL`
-    - Distributed as a single Python module
-
-Limitations:
-    1. Single level of undo + redo.
-        Once redone, it can no longer be undone.
-    2. Undoing something differently to how it was done can result
-        in fatal errors.
-    3. Using `cmds` during an undo can put Maya's undo queue in
-        an inconsistent state, leading to fatale errors
-
-"""
+"""Commit to Maya's internal Undo queue"""
 
 import os
 import sys
@@ -47,13 +11,17 @@ def maya_useNewAPI():
     pass
 
 
-# As far as a Maya plug-in is concerned, __name__ is "__builtin__"
-# but since this module must be imported prior to loading the plug-in
-# we know that it already exists in memory. We use that as a shared
-# resource for keeping track of history.
+# This module is both a Python module and Maya plug-in. Maya doesn't
+# play by the rules when it comes to loading modules, so we can't either.
+#
+# To Maya the __name__ of this module is "__builtin__", therefore in order
+# to reference it, we must spell it out by name.
+#
+# This member is what we use to share data between Python and Maya plug-in.
 shared = sys.modules["apiundo"]
 shared.undoHistory = list()
 shared.redoHistory = list()
+shared.installed = False
 
 
 def commit(undo, redo=lambda: None):
@@ -65,6 +33,9 @@ def commit(undo, redo=lambda: None):
 
     """
 
+    if not shared.installed:
+        install()
+
     shared.undoHistory.append(undo)
     shared.redoHistory.append(redo)
 
@@ -73,14 +44,30 @@ def commit(undo, redo=lambda: None):
 
 
 def install():
+    """Load this module as a plug-in
+
+    Call this prior to using the module
+
+    """
+
     cmds.loadPlugin(__file__, quiet=True)
+    shared.installed = True
 
 
 def uninstall():
     cmds.unloadPlugin(os.path.basename(__file__))
+    shared.installed = False
 
 
 def reinstall():
+    """Automatically reload both Maya plug-in and Python module
+
+    FOR DEVELOPERS
+
+    Call this when changes have been made to this module.
+
+    """
+
     # Plug-in may exist in undo queue and
     # therefore cannot be unloaded until flushed.
     state = cmds.undoInfo(state=True, query=True)
@@ -114,13 +101,11 @@ class apiUndo(om.MPxCommand):
 
 
 def initializePlugin(plugin):
-    pluginFn = om.MFnPlugin(plugin)
-    pluginFn.registerCommand(
+    om.MFnPlugin(plugin).registerCommand(
         apiUndo.__name__,
         apiUndo
     )
 
 
 def uninitializePlugin(plugin):
-    pluginFn = om.MFnPlugin(plugin)
-    pluginFn.deregisterCommand(apiUndo.__name__)
+    om.MFnPlugin(plugin).deregisterCommand(apiUndo.__name__)
