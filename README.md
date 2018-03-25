@@ -12,13 +12,6 @@ Leverage the API in your Python scripts, without losing out on the ability to un
 - Distributed as a single Python module
 - Vendorable, ship independent versions of apiundo with your code
 
-**Limitations**
-
-> Help wanted
-
-1. Undoing something differently to how it was done can result in fatal errors, for example by *not* using `MDagModifier.undoIt`
-2. Using `cmds` during an undo can put Maya's undo queue in an inconsistent state, leading to fatale errors. [More details](http://help.autodesk.com/cloudhelp/2018/ENU/Maya-Tech-Docs/CommandsPython/undoInfo.html)
-
 <br>
 
 ### Usage
@@ -45,6 +38,8 @@ apiundo.commit(
 ```
 
 Keep in mind that you are responsible for the undo to actually undo what you intend it to. `apiundo` cannot know what you are asking it to call, anything could happen.
+
+- [More details](http://help.autodesk.com/cloudhelp/2018/ENU/Maya-Tech-Docs/CommandsPython/undoInfo.html)
 
 <br>
 
