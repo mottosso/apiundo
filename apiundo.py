@@ -7,11 +7,18 @@ import types
 from maya import cmds
 from maya.api import OpenMaya as om
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
+
+# Public API
+__all__ = [
+    "commit",
+    "install",
+    "uninstall",
+]
 
 
 def maya_useNewAPI():
-    pass
+    """Plug-in boilerplate"""
 
 
 # Support for multiple co-existing versions of apiundo.
@@ -64,7 +71,7 @@ def commit(undo, redo=lambda: None):
 def install():
     """Load this module as a plug-in
 
-    Call this prior to using the module
+    Call this prior to using the module.
 
     """
 
@@ -72,6 +79,12 @@ def install():
 
 
 def uninstall():
+    """Undo `install()`
+
+    This unregisters the associated plug-in.
+
+    """
+
     # Plug-in may exist in undo queue and
     # therefore cannot be unloaded until flushed.
     cmds.flushUndo()
@@ -95,7 +108,7 @@ def reinstall():
     return module
 
 
-class apiUndo(om.MPxCommand):
+class _apiUndo(om.MPxCommand):
     def doIt(self, args):
         self.undo = shared.undo
         self.redo = shared.redo
@@ -116,11 +129,13 @@ class apiUndo(om.MPxCommand):
 
 
 def initializePlugin(plugin):
+    """Plug-in boilerplate"""
     om.MFnPlugin(plugin).registerCommand(
         command,
-        apiUndo
+        _apiUndo
     )
 
 
 def uninitializePlugin(plugin):
+    """Plug-in boilerplate"""
     om.MFnPlugin(plugin).deregisterCommand(command)
