@@ -4,6 +4,8 @@
 
 Leverage the API in your Python scripts, without losing out on the ability to undo or redo.
 
+- [Background Story](https://groups.google.com/forum/#!topic/python_inside_maya/fqX9mNfg5j0)
+
 **Features**
 
 - Undo and redo for arbitrary API calls
