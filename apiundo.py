@@ -7,7 +7,7 @@ import types
 from maya import cmds
 from maya.api import OpenMaya as om
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 # Public API
 __all__ = [
@@ -75,7 +75,7 @@ def install():
 
     """
 
-    cmds.loadPlugin(__file__, quiet=True)
+    cmds.loadPlugin(__file__.replace('.pyc', '.py'), quiet=True)
 
 
 def uninstall():
@@ -89,7 +89,7 @@ def uninstall():
     # therefore cannot be unloaded until flushed.
     cmds.flushUndo()
 
-    cmds.unloadPlugin(os.path.basename(__file__))
+    cmds.unloadPlugin(os.path.basename(__file__.replace('.pyc', '.py')))
 
 
 def reinstall():
@@ -103,7 +103,7 @@ def reinstall():
 
     uninstall()
     sys.modules.pop(__name__)
-    module = __import__(__name__)
+    module = __import__(__name__, globals(), locals(), ['*'], -1)
     module.install()
     return module
 
@@ -139,3 +139,4 @@ def initializePlugin(plugin):
 def uninitializePlugin(plugin):
     """Plug-in boilerplate"""
     om.MFnPlugin(plugin).deregisterCommand(command)
+
